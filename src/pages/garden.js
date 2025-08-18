@@ -17,6 +17,9 @@ const GardenPage = () => {
   useEffect(() => {
     if (isHydrated && !user?.onboardingCompleted) {
       router.push('/onboarding');
+    } else if (isHydrated && user?.onboardingCompleted) {
+      // Redirect to immersive garden
+      router.push('/garden-immersive');
     }
   }, [user?.onboardingCompleted, router, isHydrated]);
 

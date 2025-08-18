@@ -82,13 +82,21 @@ const useGameStore = create(
 
       // Garden actions
       addPlant: (plant) =>
-        set((state) => ({
-          garden: {
-            ...state.garden,
-            plants: [...state.garden.plants, { ...plant, id: Date.now() }],
-            totalPlants: state.garden.totalPlants + 1,
-          },
-        })),
+        set((state) => {
+          // Check if position is already occupied
+          const isOccupied = state.garden.plants.some(p => p.gridPosition === plant.gridPosition);
+          if (isOccupied && plant.gridPosition) {
+            return state; // Don't add if position is occupied
+          }
+          
+          return {
+            garden: {
+              ...state.garden,
+              plants: [...state.garden.plants, { ...plant, id: Date.now() }],
+              totalPlants: state.garden.totalPlants + 1,
+            },
+          };
+        }),
 
       growPlant: (plantId, growthAmount = 1) =>
         set((state) => ({

@@ -14,7 +14,7 @@ export default function Home() {
   useEffect(() => {
     // Redirect if user has already completed onboarding
     if (isHydrated && user?.onboardingCompleted) {
-      router.push('/garden');
+      router.push('/garden-immersive');
     }
   }, [user?.onboardingCompleted, router, isHydrated]);
 

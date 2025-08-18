@@ -20,7 +20,7 @@ const OnboardingPage = () => {
 
   useEffect(() => {
     if (isHydrated && user?.onboardingCompleted) {
-      router.push('/garden');
+      router.push('/garden-immersive');
     }
   }, [user?.onboardingCompleted, router, isHydrated]);
 
@@ -70,7 +70,7 @@ const OnboardingPage = () => {
       origin: { y: 0.6 }
     });
     setTimeout(() => {
-      router.push('/garden');
+      router.push('/garden-immersive');
     }, 2000);
   };
 
