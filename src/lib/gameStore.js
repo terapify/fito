@@ -109,6 +109,18 @@ const useGameStore = create(
             ),
           },
         })),
+      
+      updatePlant: (plantId, updates) =>
+        set((state) => ({
+          garden: {
+            ...state.garden,
+            plants: state.garden.plants.map((plant) =>
+              plant.id === plantId
+                ? { ...plant, ...updates }
+                : plant
+            ),
+          },
+        })),
 
       // Mission actions
       addMission: (mission) =>

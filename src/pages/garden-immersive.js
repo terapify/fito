@@ -10,7 +10,7 @@ import { Calendar, Target, Home, User, TreePine, Flower2, Sun } from 'lucide-rea
 
 // Dynamically import Canvas component to avoid SSR issues
 const IsometricGardenCanvas = dynamic(
-  () => import('../components/Garden/IsometricGardenCanvas'),
+  () => import('../components/Garden/IsometricGardenCanvasOptimized'),
   { 
     ssr: false,
     loading: () => (

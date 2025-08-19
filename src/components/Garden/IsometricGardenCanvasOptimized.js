@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import useGameStore from '../../lib/gameStore';
 
@@ -65,8 +65,8 @@ function drawTile(ctx, x, y, color, highlight = false) {
 
 // Draw a plant sprite
 function drawPlant(ctx, x, y, type, growth, time) {
-  const size = 20 + (growth / 100) * 30;
-  const swayOffset = Math.sin(time * 0.001 + x) * 2;
+  const size = 25 + (growth / 100) * 35; // Made plants larger
+  const swayOffset = Math.sin(time * 0.001 + x) * 3;
   
   ctx.save();
   ctx.translate(x + swayOffset, y - size / 2);
@@ -164,17 +164,6 @@ function drawDecoration(ctx, x, y, type) {
   ctx.restore();
 }
 
-// Draw particle
-function drawParticle(ctx, particle) {
-  ctx.save();
-  ctx.globalAlpha = particle.opacity;
-  ctx.fillStyle = particle.color;
-  ctx.beginPath();
-  ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
 // Helper function to shade color
 function shadeColor(color, percent) {
   const num = parseInt(color.slice(1), 16);
@@ -191,15 +180,39 @@ function shadeColor(color, percent) {
   ).toString(16).slice(1);
 }
 
-export default function IsometricGardenCanvas() {
+export default function IsometricGardenCanvasOptimized() {
   const canvasRef = useRef(null);
   const animationFrameRef = useRef();
+  const particlesRef = useRef([]);
   const [hoveredTile, setHoveredTile] = useState(null);
-  const [particles, setParticles] = useState([]);
-  const { garden, addPlant } = useGameStore();
+  const { garden, addPlant, updatePlant } = useGameStore();
+  
+  // Debug: log garden plants to console
+  useEffect(() => {
+    console.log('Garden plants:', garden.plants);
+  }, [garden.plants]);
+  
+  // Migrate existing plants without gridPosition to new grid system
+  useEffect(() => {
+    const plantsNeedingMigration = garden.plants.filter(plant => !plant.gridPosition);
+    if (plantsNeedingMigration.length > 0) {
+      console.log('Migrating plants to grid system:', plantsNeedingMigration);
+      plantsNeedingMigration.forEach((plant, index) => {
+        const row = Math.floor(index / ISO_CONFIG.gridCols);
+        const col = index % ISO_CONFIG.gridCols;
+        const gridPosition = `${row}-${col}`;
+        
+        // Update plant with grid position
+        if (updatePlant) {
+          updatePlant(plant.id, { gridPosition });
+        }
+      });
+    }
+  }, [garden.plants, updatePlant]);
   
   // Static decorations for each tile (generated once)
-  const [tileDecorations] = useState(() => {
+  const decorationsRef = useRef(null);
+  if (!decorationsRef.current) {
     const decorations = {};
     for (let row = 0; row < ISO_CONFIG.gridRows; row++) {
       for (let col = 0; col < ISO_CONFIG.gridCols; col++) {
@@ -209,29 +222,27 @@ export default function IsometricGardenCanvas() {
         }
       }
     }
-    return decorations;
-  });
+    decorationsRef.current = decorations;
+  }
 
-  // Initialize particles
+  // Initialize particles once
   useEffect(() => {
-    const initialParticles = [];
-    for (let i = 0; i < 20; i++) {
-      initialParticles.push({
+    for (let i = 0; i < 15; i++) {
+      particlesRef.current.push({
         id: i,
         x: Math.random() * 800,
         y: Math.random() * 600,
         size: Math.random() * 2 + 1,
-        speed: Math.random() * 0.5 + 0.1,
-        opacity: Math.random() * 0.5 + 0.2,
+        speed: Math.random() * 0.3 + 0.1,
+        opacity: Math.random() * 0.3 + 0.2,
         color: Math.random() > 0.5 ? '#fbbf24' : '#ffffff',
-        initialY: Math.random() * 600
+        baseX: Math.random() * 800
       });
     }
-    setParticles(initialParticles);
   }, []);
   
   // Handle mouse move
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -244,10 +255,10 @@ export default function IsometricGardenCanvas() {
     } else {
       setHoveredTile(null);
     }
-  };
+  }, []);
   
   // Handle click
-  const handleClick = (e) => {
+  const handleClick = useCallback((e) => {
     if (hoveredTile) {
       // Check if tile is empty
       const tileKey = `${hoveredTile.row}-${hoveredTile.col}`;
@@ -261,7 +272,7 @@ export default function IsometricGardenCanvas() {
         });
       }
     }
-  };
+  }, [hoveredTile, garden.plants, addPlant]);
   
   // Animation loop
   useEffect(() => {
@@ -269,11 +280,10 @@ export default function IsometricGardenCanvas() {
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    const time = { value: 0 };
-    let lastParticleUpdate = 0;
+    let time = 0;
     
     const animate = () => {
-      time.value += 16;
+      time += 16;
       
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -289,9 +299,10 @@ export default function IsometricGardenCanvas() {
       // Draw clouds
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.beginPath();
-      ctx.arc(100 + Math.sin(time.value * 0.0001) * 20, 100, 30, 0, Math.PI * 2);
-      ctx.arc(130 + Math.sin(time.value * 0.0001) * 20, 100, 40, 0, Math.PI * 2);
-      ctx.arc(170 + Math.sin(time.value * 0.0001) * 20, 100, 35, 0, Math.PI * 2);
+      const cloudOffset = Math.sin(time * 0.0001) * 20;
+      ctx.arc(100 + cloudOffset, 100, 30, 0, Math.PI * 2);
+      ctx.arc(130 + cloudOffset, 100, 40, 0, Math.PI * 2);
+      ctx.arc(170 + cloudOffset, 100, 35, 0, Math.PI * 2);
       ctx.fill();
       
       // Draw tiles and plants
@@ -308,42 +319,53 @@ export default function IsometricGardenCanvas() {
           // Draw tile
           drawTile(ctx, x, y, tileColor, isHovered);
           
-          // Draw plant if exists
-          const plant = garden.plants.find(p => p.gridPosition === `${row}-${col}`);
-          if (plant) {
-            drawPlant(ctx, x, y - 10, plant.type, plant.growth, time.value);
+          // Find plant for this position
+          const tileKey = `${row}-${col}`;
+          let plant = garden.plants.find(p => p.gridPosition === tileKey);
+          
+          // Backward compatibility: if no plant found by gridPosition, try by index
+          if (!plant) {
+            const plantIndex = row * ISO_CONFIG.gridCols + col;
+            plant = garden.plants[plantIndex];
           }
           
-          // Draw static decorations
-          const decorationType = tileDecorations[`${row}-${col}`];
+          // Draw plant if found
+          if (plant) {
+            drawPlant(ctx, x, y - 10, plant.type, plant.growth || 50, time);
+            
+            // Debug: draw a red dot to mark plant positions
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(x, y - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          
+          // Draw static decorations only if no plant
+          const decorationType = decorationsRef.current[tileKey];
           if (!plant && decorationType) {
             drawDecoration(ctx, x, y - 5, decorationType);
           }
         }
       }
       
-      // Update particles only every few frames to reduce re-renders
-      if (time.value - lastParticleUpdate > 50) {
-        setParticles(prevParticles => 
-          prevParticles.map(particle => {
-            let newY = particle.y - particle.speed;
-            let newX = particle.x + Math.sin(time.value * 0.001 + particle.id) * 0.3;
-            
-            // Reset particle if it goes off screen
-            if (newY < -10) {
-              newY = canvas.height + 10;
-              newX = (particle.id * 123) % canvas.width; // Deterministic positioning
-            }
-            
-            return { ...particle, x: newX, y: newY };
-          })
-        );
-        lastParticleUpdate = time.value;
-      }
-
-      // Draw particles
-      particles.forEach(particle => {
-        drawParticle(ctx, particle);
+      // Update and draw particles
+      particlesRef.current.forEach(particle => {
+        particle.y -= particle.speed;
+        particle.x = particle.baseX + Math.sin(time * 0.001 + particle.id) * 30;
+        
+        // Reset particle if it goes off screen
+        if (particle.y < -10) {
+          particle.y = canvas.height + 10;
+        }
+        
+        // Draw particle
+        ctx.save();
+        ctx.globalAlpha = particle.opacity;
+        ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       });
       
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -356,7 +378,7 @@ export default function IsometricGardenCanvas() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [garden.plants, hoveredTile, particles]);
+  }, [garden.plants, hoveredTile]);
   
   return (
     <motion.canvas
