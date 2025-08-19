@@ -6,7 +6,7 @@ import FitoChat from '../components/Fito/FitoChat';
 import useGameStore from '../lib/gameStore';
 import useHydration from '../hooks/useHydration';
 import { getRandomDialog, shouldShowCheckIn } from '../lib/fitoDialogs';
-import { Calendar, Target, Home, User, TreePine, Flower2, Sun } from 'lucide-react';
+import { Calendar, Target, Home, User, TreePine, Flower2, Sun, Move, Sprout } from 'lucide-react';
 
 // Dynamically import Canvas component to avoid SSR issues
 const IsometricGardenCanvas = dynamic(
@@ -28,8 +28,9 @@ const IsometricGardenCanvas = dynamic(
 
 const GardenPageImmersive = () => {
   const router = useRouter();
-  const { user, fito, garden, missions, stats, addPlant, updateStreak } = useGameStore();
+  const { user, fito, garden, missions, stats, addPlant, updateStreak, toggleMovementMode } = useGameStore();
   const [showFitoMessage, setShowFitoMessage] = useState(true);
+  const [fitoGreeting, setFitoGreeting] = useState('');
   const isHydrated = useHydration();
 
   useEffect(() => {
@@ -43,7 +44,19 @@ const GardenPageImmersive = () => {
     if (garden.plants.length === 0) {
       addPlant({ type: 'flower', growth: 30 });
     }
-  }, []);
+    
+    // Generate Fito greeting only once when component mounts
+    if (!fitoGreeting) {
+      setFitoGreeting(getFitoGreeting());
+    }
+  }, [fitoGreeting]);
+
+  // Only update greeting when missions or significant state changes occur
+  useEffect(() => {
+    if (isHydrated) {
+      setFitoGreeting(getFitoGreeting());
+    }
+  }, [missions.length, isHydrated]); // Only depend on mission count, not fito object
 
   const getFitoGreeting = () => {
     if (shouldShowCheckIn(fito.lastInteraction)) {
@@ -150,6 +163,60 @@ const GardenPageImmersive = () => {
         </div>
       </motion.div>
 
+      {/* Mode Toggle & Fito Status - Top Right */}
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2 }}
+        className="absolute top-24 right-4 z-20 space-y-3"
+      >
+        {/* Fito Status */}
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 shadow-lg">
+          <div className="flex items-center space-x-2">
+            <div className={`w-3 h-3 rounded-full ${
+              fito.mood === 'excited' ? 'bg-yellow-400' :
+              fito.mood === 'happy' ? 'bg-green-400' :
+              fito.mood === 'neutral' ? 'bg-blue-400' :
+              fito.mood === 'worried' ? 'bg-orange-400' :
+              'bg-gray-400'
+            }`} />
+            <span className="text-sm font-medium text-white">
+              Fito: {
+                fito.mood === 'excited' ? 'Emocionado' :
+                fito.mood === 'happy' ? 'Feliz' :
+                fito.mood === 'neutral' ? 'Neutral' :
+                fito.mood === 'worried' ? 'Preocupado' :
+                fito.mood === 'sad' ? 'Triste' : 'Feliz'
+              }
+            </span>
+          </div>
+        </div>
+
+        {/* Mode Toggle */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={toggleMovementMode}
+          className={`flex items-center space-x-2 px-4 py-3 rounded-2xl shadow-lg transition-all ${
+            garden.isMovementMode 
+              ? 'bg-blue-500/80 backdrop-blur-md text-white' 
+              : 'bg-green-500/80 backdrop-blur-md text-white'
+          }`}
+        >
+          {garden.isMovementMode ? (
+            <>
+              <Move className="w-5 h-5" />
+              <span className="text-sm font-medium">Mover Fito</span>
+            </>
+          ) : (
+            <>
+              <Sprout className="w-5 h-5" />
+              <span className="text-sm font-medium">Plantar</span>
+            </>
+          )}
+        </motion.button>
+      </motion.div>
+
       {/* Fito Floating Message - Bottom Right */}
       <AnimatePresence>
         {showFitoMessage && (
@@ -169,13 +236,37 @@ const GardenPageImmersive = () => {
                 </svg>
               </button>
               <FitoChat 
-                initialMessage={getFitoGreeting()}
+                initialMessage={fitoGreeting}
                 onMessageComplete={() => {}}
               />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mode Instructions - Center Top */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10"
+      >
+        <div className="bg-black/20 backdrop-blur-md rounded-xl px-4 py-2 shadow-lg">
+          <p className="text-white/90 text-sm text-center">
+            {garden.isMovementMode ? (
+              <>
+                <Move className="w-4 h-4 inline mr-1" />
+                Haz click en un tile o usa ⬅️➡️⬆️⬇️ / WASD para mover a Fito
+              </>
+            ) : (
+              <>
+                <Sprout className="w-4 h-4 inline mr-1" />
+                Haz click en un tile vacío para plantar
+              </>
+            )}
+          </p>
+        </div>
+      </motion.div>
 
       {/* Floating Action Cards - Center Bottom */}
       <motion.div

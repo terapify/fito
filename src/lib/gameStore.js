@@ -19,6 +19,7 @@ const initialState = {
     plants: [],
     level: 1,
     totalPlants: 0,
+    isMovementMode: false, // false = plant mode, true = movement mode
   },
   missions: [],
   completedMissions: [],
@@ -206,6 +207,64 @@ const useGameStore = create(
             gridPosition: { row, col },
           },
         })),
+
+      // Update Fito position with interaction timestamp (for meaningful interactions)
+      updateFitoPositionWithInteraction: (row, col) =>
+        set((state) => ({
+          fito: {
+            ...state.fito,
+            gridPosition: { row, col },
+            lastInteraction: new Date().toISOString(),
+          },
+        })),
+
+      // Garden mode actions
+      toggleMovementMode: () =>
+        set((state) => ({
+          garden: {
+            ...state.garden,
+            isMovementMode: !state.garden.isMovementMode,
+          },
+        })),
+
+      // Dynamic mood calculation
+      getCurrentFitoMood: () => {
+        const state = get();
+        const { missions, completedMissions, stats, streak } = state;
+        
+        // No missions and good streak = happy
+        if (missions.length === 0 && streak.current > 3) return 'excited';
+        if (missions.length === 0) return 'happy';
+        
+        // Many pending missions = worried
+        if (missions.length > 5) return 'worried';
+        
+        // Recently completed many missions = excited
+        if (completedMissions.length > missions.length * 2) return 'excited';
+        
+        // Lost streak or no recent activity = sad
+        if (streak.current === 0 && stats.missionsCompleted > 0) return 'sad';
+        
+        // Default states
+        if (stats.streak?.current > 7) return 'excited';
+        if (stats.streak?.current > 3) return 'happy';
+        if (missions.length > 3) return 'neutral';
+        
+        return 'happy';
+      },
+
+      // Update Fito mood based on current state
+      updateFitoMood: (customMood = null) =>
+        set((state) => {
+          const mood = customMood || get().getCurrentFitoMood();
+          return {
+            fito: {
+              ...state.fito,
+              mood,
+              lastInteraction: new Date().toISOString(),
+            },
+          };
+        }),
     }),
     {
       name: 'fito-game-storage',
