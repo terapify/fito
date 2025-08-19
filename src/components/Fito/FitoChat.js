@@ -1,29 +1,48 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FitoAvatar from './FitoAvatar';
 import { getTimeBasedGreeting, getRandomDialog } from '../../lib/fitoDialogs';
 import useGameStore from '../../lib/gameStore';
 
-const FitoChat = memo(({ initialMessage = null, onMessageComplete = null }) => {
+const FitoChat = memo(({ initialMessage = null, onMessageComplete = null, stepId = null }) => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
+  const [completedMessage, setCompletedMessage] = useState('');
+  const lastStepId = useRef(null);
+  const lastInitialMessage = useRef(null);
   
   const { fito, user, updateFitoMood } = useGameStore();
 
   useEffect(() => {
+    // Only update when initialMessage actually changes content or stepId changes
+    const stepChanged = stepId !== null && stepId !== lastStepId.current;
+    const messageChanged = initialMessage && initialMessage !== lastInitialMessage.current;
+    
+    if (!stepChanged && !messageChanged) return;
+    
+    let messageToSet = '';
+    
     if (!initialMessage || initialMessage === 'undefined') {
       const greeting = user?.name && user.name !== 'undefined'
         ? `${getTimeBasedGreeting()}, ${user.name}!`
         : getTimeBasedGreeting();
-      setCurrentMessage(greeting);
+      messageToSet = greeting;
     } else {
-      setCurrentMessage(initialMessage);
+      messageToSet = initialMessage;
     }
-  }, [initialMessage, user?.name]);
+    
+    // Only update if message content is actually different
+    if (messageToSet && messageToSet !== currentMessage) {
+      setCurrentMessage(messageToSet);
+      lastStepId.current = stepId;
+      lastInitialMessage.current = initialMessage;
+    }
+  }, [initialMessage, stepId]); // Removed user?.name and currentMessage dependencies
 
   useEffect(() => {
-    if (currentMessage && currentMessage !== 'undefined') {
+    // Only execute typing effect if message is different from the already completed one
+    if (currentMessage && currentMessage !== 'undefined' && currentMessage !== completedMessage) {
       setIsTyping(true);
       setDisplayedText('');
       
@@ -35,6 +54,7 @@ const FitoChat = memo(({ initialMessage = null, onMessageComplete = null }) => {
         } else {
           setIsTyping(false);
           clearInterval(interval);
+          setCompletedMessage(currentMessage); // Mark this message as completed
           if (onMessageComplete) {
             onMessageComplete();
           }
@@ -43,7 +63,7 @@ const FitoChat = memo(({ initialMessage = null, onMessageComplete = null }) => {
 
       return () => clearInterval(interval);
     }
-  }, [currentMessage, onMessageComplete]);
+  }, [currentMessage]); // Only depend on currentMessage
 
   const handleNewMessage = (message) => {
     setCurrentMessage(message);

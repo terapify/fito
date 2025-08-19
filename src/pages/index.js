@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import FitoAvatar from '../components/Fito/FitoAvatar';
 import useGameStore from '../lib/gameStore';
 import useHydration from '../hooks/useHydration';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight, Heart, Target, Users } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -23,110 +23,154 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--linear-gradient)' }}>
+    <div className="min-h-screen gradient-bg flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-400/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-40 h-40 bg-blue-400/10 rounded-full blur-2xl" />
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="max-w-2xl w-full text-center"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="w-full max-w-3xl relative z-10"
       >
-        {/* Logo and Fito */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ 
-            type: 'spring',
-            stiffness: 260,
-            damping: 20,
-            delay: 0.2 
-          }}
-          className="mb-8 flex justify-center"
-        >
-          <FitoAvatar mood="happy" size="medium" />
-        </motion.div>
-
-        {/* Welcome Text */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white/90 backdrop-blur-lg rounded-3xl p-10 shadow-2xl"
-        >
-          <h1 className="text-4xl font-bold mb-4 gradient-text">
-            Bienvenido a Fito
-          </h1>
-          <p className="text-xl text-gray-700 mb-2">
-            Tu compañero de bienestar emocional
-          </p>
-          <p className="text-gray-600 mb-8">
-            Juntos cultivaremos tu jardín de bienestar, paso a paso, misión tras misión.
-          </p>
-
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 mt-8">
+        {/* Main glassmorphism container */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+          {/* Header with Fito */}
+          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-6 border-b border-white/10 text-center">
             <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="rounded-xl p-6 card-shadow"
-              style={{ backgroundColor: 'var(--light-blue-background)' }}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                type: 'spring',
+                stiffness: 260,
+                damping: 20,
+                delay: 0.2 
+              }}
+              className="mb-4 flex justify-center"
             >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: 'var(--primary-light)' }}>
-                <Sparkles className="w-6 h-6" style={{ color: 'var(--primary)' }} />
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-1">Jardín Personal</h3>
-              <p className="text-sm text-gray-600">
-                Cultiva plantas que crecen con tu progreso
-              </p>
+              <FitoAvatar mood="excited" size="medium" />
             </motion.div>
 
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="rounded-xl p-6 card-shadow"
-              style={{ backgroundColor: 'var(--pink)' }}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-3xl font-bold text-white mb-2"
             >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: 'var(--bubble-pink-20)' }}>
-                <Sparkles className="w-6 h-6" style={{ color: 'var(--bubble-pink)' }} />
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-1">Misiones Diarias</h3>
-              <p className="text-sm text-gray-600">
-                Actividades diseñadas para tu bienestar
-              </p>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="rounded-xl p-6 card-shadow"
-              style={{ backgroundColor: 'var(--sky-blue)' }}
+              ¡Hola! Soy Fito 👋
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-lg text-white/90 mb-2"
             >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: 'var(--primary-10)' }}>
-                <Sparkles className="w-6 h-6" style={{ color: 'var(--turquoise-dark)' }} />
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-1">Acompañamiento</h3>
-              <p className="text-sm text-gray-600">
-                Fito estará contigo entre cada sesión
-              </p>
-            </motion.div>
+              Tu compañero de bienestar emocional
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="text-white/80 leading-relaxed text-sm"
+            >
+              Juntos cultivaremos tu jardín de bienestar personal, donde cada paso que tomes hará crecer algo hermoso. 🌱
+            </motion.p>
           </div>
 
-          {/* CTA Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleStart}
-            className="text-white py-4 px-8 rounded-2xl text-lg font-semibold transform transition-all inline-flex items-center space-x-2 button-shadow-hover"
-            style={{ background: 'var(--button-gradient)' }}
-          >
-            <span>Comenzar mi viaje</span>
-            <ArrowRight className="w-5 h-5" />
-          </motion.button>
+          {/* Content area */}
+          <div className="p-10">
+            {/* Features grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                whileHover={{ scale: 1.02, y: -4 }}
+                className="relative p-6 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-center hover:bg-white/20 transition-all"
+              >
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-white font-semibold text-lg mb-2">Jardín Personal</h3>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Cultiva plantas que crecen con tu progreso y reflejan tu bienestar
+                </p>
+              </motion.div>
 
-          <p className="text-xs text-gray-500 mt-6">
-            Tu información es privada y segura
-          </p>
-        </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9 }}
+                whileHover={{ scale: 1.02, y: -4 }}
+                className="relative p-6 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-center hover:bg-white/20 transition-all"
+              >
+                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Target className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-white font-semibold text-lg mb-2">Misiones Personalizadas</h3>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Actividades diseñadas por tu terapeuta para tu crecimiento personal
+                </p>
+              </motion.div>
 
-        {/* Floating decorations */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0 }}
+                whileHover={{ scale: 1.02, y: -4 }}
+                className="relative p-6 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 text-center hover:bg-white/20 transition-all"
+              >
+                <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Heart className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-white font-semibold text-lg mb-2">Acompañamiento 24/7</h3>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Estoy aquí para apoyarte entre sesiones y celebrar tus logros
+                </p>
+              </motion.div>
+            </motion.div>
+
+            {/* CTA Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1 }}
+              className="text-center"
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleStart}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 px-10 rounded-2xl text-lg font-semibold hover:shadow-xl transition-all inline-flex items-center space-x-2"
+              >
+                <span>Comenzar mi viaje de bienestar</span>
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2 }}
+                className="text-white/60 text-sm mt-6"
+              >
+                🔒 Tu información es completamente privada y segura
+              </motion.p>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Floating decorative elements */}
         <motion.div
-          className="absolute top-10 left-10 text-purple-300 opacity-20"
+          className="absolute top-10 left-10 text-purple-300/30"
           animate={{
             y: [0, -20, 0],
             rotate: [0, 10, 0],
@@ -141,7 +185,7 @@ export default function Home() {
         </motion.div>
 
         <motion.div
-          className="absolute bottom-10 right-10 text-pink-300 opacity-20"
+          className="absolute bottom-10 right-10 text-pink-300/30"
           animate={{
             y: [0, 20, 0],
             rotate: [0, -10, 0],
@@ -152,13 +196,13 @@ export default function Home() {
             ease: 'easeInOut',
           }}
         >
-          <Sparkles size={40} />
+          <Heart size={35} />
         </motion.div>
 
         <motion.div
-          className="absolute top-1/2 right-20 text-blue-300 opacity-20"
+          className="absolute top-1/3 right-20 text-blue-300/30"
           animate={{
-            x: [0, 20, 0],
+            x: [0, 15, 0],
             rotate: [0, 180, 360],
           }}
           transition={{
@@ -167,7 +211,7 @@ export default function Home() {
             ease: 'easeInOut',
           }}
         >
-          <Sparkles size={30} />
+          <Target size={30} />
         </motion.div>
       </motion.div>
     </div>
