@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FitoAvatar from './FitoAvatar';
 import { getTimeBasedGreeting, getRandomDialog } from '../../lib/fitoDialogs';
 import useGameStore from '../../lib/gameStore';
 
-const FitoChat = ({ initialMessage = null, onMessageComplete = null }) => {
+const FitoChat = memo(({ initialMessage = null, onMessageComplete = null }) => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
@@ -110,6 +110,8 @@ const FitoChat = ({ initialMessage = null, onMessageComplete = null }) => {
       )}
     </motion.div>
   );
-};
+});
+
+FitoChat.displayName = 'FitoChat';
 
 export default FitoChat;

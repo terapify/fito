@@ -35,6 +35,15 @@ const initialState = {
     totalPoints: 0,
   },
   notifications: [],
+  appointment: {
+    scheduled: true,
+    dateTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow by default
+    therapist: 'Dr. Homero Simpson',
+    type: 'Sesión virtual',
+    status: 'scheduled', // scheduled, in-progress, completed, cancelled
+    duration: 60, // minutes
+    rescheduled: false,
+  },
 };
 
 const useGameStore = create(
@@ -127,16 +136,27 @@ const useGameStore = create(
       // Mission actions
       addMission: (mission) =>
         set((state) => ({
-          missions: [...state.missions, { ...mission, id: Date.now(), status: 'pending' }],
+          missions: [...state.missions, { 
+            ...mission, 
+            id: `mission_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
+            status: 'pending' 
+          }],
         })),
 
       completeMission: (missionId) =>
         set((state) => {
           const mission = state.missions.find((m) => m.id === missionId);
-          if (!mission) return state;
+          if (!mission) {
+            console.log('❌ Mission not found:', missionId);
+            return state;
+          }
+
+          // console.log('✅ Completing mission in store:', mission.type, mission.title);
+          const newMissions = state.missions.filter((m) => m.id !== missionId);
+          // console.log('📋 Remaining missions:', newMissions.length);
 
           return {
-            missions: state.missions.filter((m) => m.id !== missionId),
+            missions: newMissions,
             completedMissions: [...state.completedMissions, { ...mission, completedAt: new Date().toISOString() }],
             stats: {
               ...state.stats,
@@ -197,6 +217,37 @@ const useGameStore = create(
           ),
         })),
 
+      // Appointment actions
+      updateAppointment: (appointmentData) =>
+        set((state) => ({
+          appointment: {
+            ...state.appointment,
+            ...appointmentData,
+          },
+        })),
+
+      cancelAppointment: () =>
+        set((state) => ({
+          appointment: {
+            ...state.appointment,
+            scheduled: false,
+            status: 'cancelled',
+          },
+        })),
+
+      scheduleAppointment: (dateTime, therapist = 'Dr. Homero Simpson') =>
+        set((state) => ({
+          appointment: {
+            scheduled: true,
+            dateTime,
+            therapist,
+            type: 'Sesión virtual',
+            status: 'scheduled',
+            duration: 60,
+            rescheduled: false,
+          },
+        })),
+
       // Reset game
       resetGame: () => set(initialState),
 
@@ -227,30 +278,47 @@ const useGameStore = create(
           },
         })),
 
-      // Dynamic mood calculation
+      // Dynamic mood calculation with gradual transitions
       getCurrentFitoMood: () => {
         const state = get();
         const { missions, completedMissions, stats, streak } = state;
+        const missionCount = missions.length;
+        const streakDays = streak.current || 0;
         
-        // No missions and good streak = happy
-        if (missions.length === 0 && streak.current > 3) return 'excited';
-        if (missions.length === 0) return 'happy';
+        // Priority 1: Check for sad state (lost streak)
+        if (streakDays === 0 && stats.missionsCompleted > 5) {
+          return 'sad';
+        }
         
-        // Many pending missions = worried
-        if (missions.length > 5) return 'worried';
+        // Priority 2: Check mission count for gradual transitions
+        if (missionCount === 0) {
+          // No missions - mood depends on streak
+          if (streakDays > 7) return 'excited';
+          if (streakDays > 3) return 'happy';
+          return 'happy'; // Default when no missions
+        }
         
-        // Recently completed many missions = excited
-        if (completedMissions.length > missions.length * 2) return 'excited';
+        // Priority 3: Recently completed many missions
+        const recentCompletions = completedMissions.length;
+        if (recentCompletions > missionCount * 2 && missionCount <= 2) {
+          return 'excited';
+        }
         
-        // Lost streak or no recent activity = sad
-        if (streak.current === 0 && stats.missionsCompleted > 0) return 'sad';
+        // Priority 4: Gradual mood based on mission count
+        if (missionCount === 1 || missionCount === 2) {
+          return streakDays > 3 ? 'happy' : 'neutral';
+        }
         
-        // Default states
-        if (stats.streak?.current > 7) return 'excited';
-        if (stats.streak?.current > 3) return 'happy';
-        if (missions.length > 3) return 'neutral';
+        if (missionCount === 3 || missionCount === 4) {
+          return 'neutral';
+        }
         
-        return 'happy';
+        if (missionCount >= 5) {
+          return 'worried';
+        }
+        
+        // Default fallback
+        return 'neutral';
       },
 
       // Update Fito mood based on current state

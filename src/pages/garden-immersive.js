@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import FitoChat from '../components/Fito/FitoChat';
+import MissionsPanel from '../components/Missions/MissionsPanel';
+import AppointmentReminder from '../components/Appointments/AppointmentReminder';
 import useGameStore from '../lib/gameStore';
 import useHydration from '../hooks/useHydration';
 import { getRandomDialog, shouldShowCheckIn } from '../lib/fitoDialogs';
@@ -28,10 +30,24 @@ const IsometricGardenCanvas = dynamic(
 
 const GardenPageImmersive = () => {
   const router = useRouter();
-  const { user, fito, garden, missions, stats, addPlant, updateStreak, toggleMovementMode } = useGameStore();
+  const { user, fito, garden, missions, stats, appointment, addPlant, updateStreak, toggleMovementMode } = useGameStore();
   const [showFitoMessage, setShowFitoMessage] = useState(true);
-  const [fitoGreeting, setFitoGreeting] = useState('');
   const isHydrated = useHydration();
+  
+  // Generate greeting only once when component mounts
+  const [fitoGreeting] = useState(() => {
+    if (!isHydrated) return '';
+    if (shouldShowCheckIn(fito?.lastInteraction)) {
+      return getRandomDialog('checkIn', 'mood');
+    }
+    if (missions?.length > 0) {
+      return getRandomDialog('missions', 'reminder');
+    }
+    if (stats?.streak?.current > 3) {
+      return getRandomDialog('encouragement', 'streak', { days: stats.streak.current });
+    }
+    return getRandomDialog('encouragement', 'general');
+  });
 
   useEffect(() => {
     if (isHydrated && !user?.onboardingCompleted) {
@@ -40,36 +56,23 @@ const GardenPageImmersive = () => {
   }, [user?.onboardingCompleted, router, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+    
     updateStreak();
     if (garden.plants.length === 0) {
       addPlant({ type: 'flower', growth: 30 });
     }
-    
-    // Generate Fito greeting only once when component mounts
-    if (!fitoGreeting) {
-      setFitoGreeting(getFitoGreeting());
-    }
-  }, [fitoGreeting]);
+  }, [isHydrated]); // Only run once when hydrated
 
-  // Only update greeting when missions or significant state changes occur
-  useEffect(() => {
-    if (isHydrated) {
-      setFitoGreeting(getFitoGreeting());
-    }
-  }, [missions.length, isHydrated]); // Only depend on mission count, not fito object
-
-  const getFitoGreeting = () => {
-    if (shouldShowCheckIn(fito.lastInteraction)) {
-      return getRandomDialog('checkIn', 'mood');
-    }
-    if (missions.length > 0) {
-      return getRandomDialog('missions', 'reminder');
-    }
-    if (stats?.streak?.current > 3) {
-      return getRandomDialog('encouragement', 'streak', { days: stats.streak.current });
-    }
-    return getRandomDialog('encouragement', 'general');
-  };
+  // Memoized FitoChat component to prevent re-renders
+  const MemoizedFitoChat = useMemo(() => {
+    return memo(({ message }) => (
+      <FitoChat 
+        initialMessage={message}
+        onMessageComplete={() => {}}
+      />
+    ));
+  }, []);
 
   const handleNavigate = (path) => {
     router.push(path);
@@ -79,6 +82,9 @@ const GardenPageImmersive = () => {
     <div className="relative w-full h-screen overflow-hidden">
       {/* Isometric Garden Canvas */}
       <IsometricGardenCanvas />
+      
+      {/* Missions Panel */}
+      <MissionsPanel />
       
       {/* Gradient overlay for depth */}
       <div className="absolute inset-0 pointer-events-none">
@@ -105,30 +111,15 @@ const GardenPageImmersive = () => {
             </p>
           </motion.div>
 
-          {/* Action buttons */}
-          <div className="flex space-x-2">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleNavigate('/missions')}
-              className="bg-white/20 backdrop-blur-md text-white p-3 rounded-xl hover:bg-white/30 transition-all relative shadow-lg"
-            >
-              <Target className="w-6 h-6" />
-              {missions.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                  {missions.length}
-                </span>
-              )}
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleNavigate('/profile')}
-              className="bg-white/20 backdrop-blur-md text-white p-3 rounded-xl hover:bg-white/30 transition-all shadow-lg"
-            >
-              <User className="w-6 h-6" />
-            </motion.button>
-          </div>
+          {/* Profile button only */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleNavigate('/profile')}
+            className="bg-white/20 backdrop-blur-md text-white p-3 rounded-xl hover:bg-white/30 transition-all shadow-lg"
+          >
+            <User className="w-6 h-6" />
+          </motion.button>
         </div>
       </motion.div>
 
@@ -235,10 +226,7 @@ const GardenPageImmersive = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              <FitoChat 
-                initialMessage={fitoGreeting}
-                onMessageComplete={() => {}}
-              />
+              <MemoizedFitoChat message={fitoGreeting} />
             </div>
           </motion.div>
         )}
@@ -275,42 +263,31 @@ const GardenPageImmersive = () => {
         transition={{ delay: 0.3 }}
         className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20"
       >
-        <div className="flex space-x-4">
-          <motion.button
-            whileHover={{ scale: 1.05, y: -5 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleNavigate('/missions')}
-            className="bg-white/15 backdrop-blur-md rounded-2xl px-6 py-3 shadow-lg hover:bg-white/25 transition-all"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="bg-purple-400/30 p-2 rounded-xl">
-                <Target className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-4">
+          {/* Appointment Reminder Card */}
+          {appointment && appointment.scheduled && (
+            <AppointmentReminder />
+          )}
+          
+          {/* Schedule New Appointment Button */}
+          {(!appointment || !appointment.scheduled) && (
+            <motion.button
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleNavigate('/schedule')}
+              className="bg-white/15 backdrop-blur-md rounded-2xl px-6 py-3 shadow-lg hover:bg-white/25 transition-all"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-blue-400/30 p-2 rounded-xl">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-semibold text-sm">Agendar</p>
+                  <p className="text-white/80 text-xs">Próxima sesión</p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-white font-semibold text-sm">Misiones</p>
-                <p className="text-white/80 text-xs">
-                  {missions.length > 0 ? `${missions.length} pendientes` : 'Ver todas'}
-                </p>
-              </div>
-            </div>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.05, y: -5 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleNavigate('/schedule')}
-            className="bg-white/15 backdrop-blur-md rounded-2xl px-6 py-3 shadow-lg hover:bg-white/25 transition-all"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-400/30 p-2 rounded-xl">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="text-white font-semibold text-sm">Agendar</p>
-                <p className="text-white/80 text-xs">Próxima sesión</p>
-              </div>
-            </div>
-          </motion.button>
+            </motion.button>
+          )}
         </div>
       </motion.div>
 

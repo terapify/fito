@@ -221,7 +221,7 @@ function drawFitoWithMood(ctx, x, y, mood = 'happy', time = 0, imageCache = {}) 
     img.src = url;
     
     // Fallback to basic drawing while image loads
-    console.log('🎨 Creating SVG for mood:', mood);
+    // console.log('🎨 Creating SVG for mood:', mood);
     drawFitoBasic(ctx, x, y, mood);
     return;
   }
@@ -365,7 +365,7 @@ function IsometricGardenCanvasOptimized() {
   const particlesRef = useRef([]);
   const [hoveredTile, setHoveredTile] = useState(null);
   const hoveredTileRef = useRef(null);
-  const { garden, addPlant, fito, updateFitoPosition, toggleMovementMode, getCurrentFitoMood, updateFitoMood } = useGameStore();
+  const { garden, addPlant, fito, updateFitoPosition, toggleMovementMode, getCurrentFitoMood, updateFitoMood, missions, stats } = useGameStore();
   const fitoRef = useRef(fito);
   const [currentFitoMood, setCurrentFitoMood] = useState(() => {
     // Initialize with actual mood from store
@@ -373,13 +373,13 @@ function IsometricGardenCanvasOptimized() {
   });
   const fitoImageCacheRef = useRef({});
   
-  // Debug: Component lifecycle
-  useEffect(() => {
-    console.log('🎨 IsometricGardenCanvas mounted');
-    return () => {
-      console.log('🎨 IsometricGardenCanvas unmounted');
-    };
-  }, []);
+  // Component lifecycle tracking (commented out to reduce console spam)
+  // useEffect(() => {
+  //   console.log('🎨 IsometricGardenCanvas mounted');
+  //   return () => {
+  //     console.log('🎨 IsometricGardenCanvas unmounted');
+  //   };
+  // }, []);
 
   useEffect(() => {
     // Only update fitoRef when gridPosition actually changes to avoid unnecessary updates
@@ -390,18 +390,24 @@ function IsometricGardenCanvasOptimized() {
     }
   }, [fito?.gridPosition?.row, fito?.gridPosition?.col, fito]);
 
-  // Update Fito mood dynamically
+  // Update Fito mood dynamically when missions or stats change
   useEffect(() => {
     const newMood = getCurrentFitoMood();
-    if (newMood !== currentFitoMood) {
+    // Only log when mood actually changes
+    // console.log('🎭 Checking mood - current:', currentFitoMood, 'new:', newMood, 'missions:', missions.length);
+    
+    // Ensure we have a valid mood
+    if (newMood && newMood !== currentFitoMood) {
       console.log('🎭 Mood changed from', currentFitoMood, 'to', newMood);
-      setCurrentFitoMood(newMood);
-      // Clear image cache for old mood to force recreation
-      if (fitoImageCacheRef.current[currentFitoMood]) {
+      
+      // Clear old mood from cache before updating
+      if (currentFitoMood && fitoImageCacheRef.current[currentFitoMood]) {
         delete fitoImageCacheRef.current[currentFitoMood];
       }
+      
+      setCurrentFitoMood(newMood);
     }
-  }, [garden.plants.length, getCurrentFitoMood]); // Removed currentFitoMood from deps to avoid infinite loop
+  }, [missions.length, stats?.missionsCompleted, stats?.streak?.current, garden.plants.length, getCurrentFitoMood]); // Monitor all relevant state changes
 
   // Update mood every 30 seconds
   useEffect(() => {
@@ -688,14 +694,14 @@ function IsometricGardenCanvasOptimized() {
       const currentX = fitoStateRef.current.currentPosition.x;
       const currentY = fitoStateRef.current.currentPosition.y;
       
-      // Log only occasionally to reduce spam
-      if (time % 1000 < 16) {
-        console.log('🦊 Drawing Fito:', { 
-          pos: { x: currentX.toFixed(1), y: currentY.toFixed(1) }, 
-          mood: currentFitoMood,
-          gridPos: fitoStateRef.current.gridPosition 
-        });
-      }
+      // Logging commented out to reduce console spam
+      // if (time % 1000 < 16) {
+      //   console.log('🦊 Drawing Fito:', { 
+      //     pos: { x: currentX.toFixed(1), y: currentY.toFixed(1) }, 
+      //     mood: currentFitoMood,
+      //     gridPos: fitoStateRef.current.gridPosition 
+      //   });
+      // }
       
       drawFitoWithMood(ctx, currentX, currentY, currentFitoMood, time, fitoImageCacheRef.current);
       
@@ -731,7 +737,7 @@ function IsometricGardenCanvasOptimized() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [garden.plants]); // Removed api and fitoSpring from dependencies to prevent resets
+  }, [garden.plants, currentFitoMood]); // Added currentFitoMood to trigger re-render when mood changes
   
   return (
     <motion.canvas
