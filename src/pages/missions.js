@@ -46,7 +46,9 @@ const MissionsPage = () => {
         }
       ];
       
-      sampleMissions.forEach(mission => addMission(mission));
+      sampleMissions.forEach((mission, index) => {
+        setTimeout(() => addMission(mission), index * 10);
+      });
     }
   }, [user?.onboardingCompleted, missions.length, isHydrated]);
 

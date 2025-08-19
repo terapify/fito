@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@react-spring/web": "^10.0.1",
     "@react-three/drei": "^10.7.3",
     "@react-three/fiber": "^9.3.0",
     "@react-three/postprocessing": "^3.0.4",
