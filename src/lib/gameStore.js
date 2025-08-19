@@ -44,6 +44,12 @@ const initialState = {
     duration: 60, // minutes
     rescheduled: false,
   },
+  chat: {
+    isOpen: false,
+    messages: [],
+    turnCount: 0,
+    isLoading: false,
+  },
 };
 
 const useGameStore = create(
@@ -245,6 +251,41 @@ const useGameStore = create(
             status: 'scheduled',
             duration: 60,
             rescheduled: false,
+          },
+        })),
+
+      // Chat actions
+      toggleChat: () =>
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            isOpen: !state.chat.isOpen,
+          },
+        })),
+
+      addChatMessage: (message) =>
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            messages: [...state.chat.messages, message],
+            turnCount: message.role === 'user' ? state.chat.turnCount + 1 : state.chat.turnCount,
+          },
+        })),
+
+      setChatLoading: (loading) =>
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            isLoading: loading,
+          },
+        })),
+
+      clearChatHistory: () =>
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            messages: [],
+            turnCount: 0,
           },
         })),
 

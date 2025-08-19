@@ -6,12 +6,13 @@ const FitoAvatar = ({ mood = 'happy', size = 'medium', isAnimating = true, isTyp
 
   // Tamaños del avatar
   const sizes = {
+    tiny: { width: 24, height: 20, scale: 0.4 },
     small: { width: 60, height: 51, scale: 1 },
     medium: { width: 120, height: 102, scale: 2 },
     large: { width: 180, height: 153, scale: 3 },
   };
 
-  const currentSize = sizes[size];
+  const currentSize = sizes[size] || sizes.medium;
 
   // Colores según el estado de ánimo
   const moodColors = {

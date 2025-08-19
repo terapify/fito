@@ -3,12 +3,13 @@ import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import FitoChat from '../components/Fito/FitoChat';
+import FitoChatWindow from '../components/Fito/FitoChatWindow';
 import MissionsPanel from '../components/Missions/MissionsPanel';
 import AppointmentReminder from '../components/Appointments/AppointmentReminder';
 import useGameStore from '../lib/gameStore';
 import useHydration from '../hooks/useHydration';
 import { getRandomDialog, shouldShowCheckIn } from '../lib/fitoDialogs';
-import { Calendar, Target, Home, User, TreePine, Flower2, Sun, Move, Sprout } from 'lucide-react';
+import { Calendar, Target, Home, User, TreePine, Flower2, Sun, Move, Sprout, MessageCircle } from 'lucide-react';
 
 // Dynamically import Canvas component to avoid SSR issues
 const IsometricGardenCanvas = dynamic(
@@ -30,7 +31,7 @@ const IsometricGardenCanvas = dynamic(
 
 const GardenPageImmersive = () => {
   const router = useRouter();
-  const { user, fito, garden, missions, stats, appointment, addPlant, updateStreak, toggleMovementMode } = useGameStore();
+  const { user, fito, garden, missions, stats, appointment, chat, addPlant, updateStreak, toggleMovementMode, toggleChat } = useGameStore();
   const [showFitoMessage, setShowFitoMessage] = useState(true);
   const isHydrated = useHydration();
   
@@ -227,6 +228,17 @@ const GardenPageImmersive = () => {
                 </svg>
               </button>
               <MemoizedFitoChat message={fitoGreeting} />
+              
+              {/* Chat Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleChat}
+                className="mt-3 w-full bg-purple-500/80 backdrop-blur-md text-white px-4 py-2 rounded-xl hover:bg-purple-600/80 transition-all flex items-center justify-center space-x-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Hablar con Fito</span>
+              </motion.button>
             </div>
           </motion.div>
         )}
@@ -331,6 +343,11 @@ const GardenPageImmersive = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Chat Window */}
+      <AnimatePresence>
+        {chat.isOpen && <FitoChatWindow />}
+      </AnimatePresence>
     </div>
   );
 };
