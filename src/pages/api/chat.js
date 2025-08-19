@@ -21,10 +21,14 @@ DIRECTRICES:
 3. Usa metáforas simples del jardín cuando sea natural
 4. Sé empático pero directo
 5. Si hay crisis, recomienda ayuda profesional inmediata
+6. Conoces las misiones específicas del usuario - puedes mencionarlas por nombre y ayudar con ellas
+7. Si el usuario pregunta sobre sus tareas, referencia las misiones exactas que tiene pendientes
 
 EJEMPLOS de respuestas BUENAS (breves):
 - "Entiendo que te sientes ansioso. Es como cuando una planta necesita más agua 🌱 ¿Qué situación específica te está generando esa ansiedad?"
 - "¡Qué bueno que hayas completado esa misión! 🎉 ¿Cómo te sientes después de lograr ese paso?"
+- "Veo que tienes pendiente la misión de 'Registro de emociones'. ¿Te gustaría que te ayude a empezar con eso?"
+- "Tu terapeuta te asignó ejercicios de respiración. ¿Has tenido oportunidad de practicarlos?"
 
 Mantén siempre un tono esperanzador y haz que la persona se sienta escuchada.`;
 
@@ -55,8 +59,22 @@ CONTEXTO DEL USUARIO:
 - Misiones completadas: ${userContext.missionsCompleted || 0}
 - Racha actual: ${userContext.streak || 0} días
 - Estado de ánimo de Fito: ${userContext.fitoMood || 'neutral'}
+- Misiones pendientes: ${userContext.totalPendingMissions || 0}
 
-Utiliza esta información para personalizar tu respuesta y hacer conexiones relevantes con su progreso.
+${userContext.pendingMissions && userContext.pendingMissions.length > 0 ? `
+MISIONES PENDIENTES ACTUALES:
+${userContext.pendingMissions.map((mission, index) => `
+${index + 1}. ${mission.title}
+   Tipo: ${mission.type}
+   Descripción: ${mission.description}
+   Asignada por: ${mission.assignedBy}
+   Estado: ${mission.status}
+`).join('')}
+
+Puedes hacer referencia específica a estas misiones si el usuario pregunta sobre ellas o necesita motivación para completarlas.
+` : ''}
+
+Utiliza esta información para personalizar tu respuesta y hacer conexiones relevantes con su progreso y misiones específicas.
 ` : '';
 
     // Prepare messages for Anthropic
@@ -79,7 +97,7 @@ Utiliza esta información para personalizar tu respuesta y hacer conexiones rele
 
     const stream = await anthropic.messages.create({
       model: 'claude-3-haiku-20240307',
-      max_tokens: 150,
+      max_tokens: 300,
       temperature: 0.8,
       system: SYSTEM_PROMPT,
       messages: anthropicMessages,

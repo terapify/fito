@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, MessageCircle, RefreshCw } from 'lucide-react';
 import FitoAvatar from './FitoAvatar';
 import useGameStore from '../../lib/gameStore';
+import { getTimeBasedGreeting } from '../../lib/fitoDialogs';
 
 const FitoChatWindow = memo(() => {
   const {
@@ -11,10 +12,12 @@ const FitoChatWindow = memo(() => {
     user,
     garden,
     stats,
+    missions,
     toggleChat,
     addChatMessage,
     setChatLoading,
     clearChatHistory,
+    updateFitoMood,
   } = useGameStore();
 
   const [inputMessage, setInputMessage] = useState('');
@@ -58,7 +61,7 @@ const FitoChatWindow = memo(() => {
       }
 
       let index = 0;
-      const typingSpeed = 30; // Milliseconds per character
+      const typingSpeed = 50; // Milliseconds per character (slower for better readability)
 
       streamingIntervalRef.current = setInterval(() => {
         if (index <= streamingMessage.length) {
@@ -82,7 +85,11 @@ const FitoChatWindow = memo(() => {
 
   useEffect(() => {
     if (chat.isOpen && inputRef.current) {
-      inputRef.current.focus();
+      // Focus input after initial message is sent
+      const timer = setTimeout(() => {
+        inputRef.current.focus();
+      }, 1200);
+      return () => clearTimeout(timer);
     }
   }, [chat.isOpen]);
 
@@ -92,6 +99,16 @@ const FitoChatWindow = memo(() => {
     missionsCompleted: stats?.missionsCompleted || 0,
     streak: stats?.streak?.current || 0,
     fitoMood: fito?.mood || 'neutral',
+    pendingMissions: missions?.map(mission => ({
+      id: mission.id,
+      type: mission.type,
+      title: mission.title,
+      description: mission.description,
+      status: mission.status,
+      assignedBy: mission.assignedBy || 'Terapeuta',
+      createdAt: mission.createdAt,
+    })) || [],
+    totalPendingMissions: missions?.length || 0,
   });
 
   const sendMessage = async () => {
@@ -107,6 +124,13 @@ const FitoChatWindow = memo(() => {
     addChatMessage(userMessage);
     setInputMessage('');
     setChatLoading(true);
+    
+    // Keep focus on input after sending message
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
 
     try {
       const response = await fetch('/api/chat', {
@@ -146,6 +170,13 @@ const FitoChatWindow = memo(() => {
 
       addChatMessage(assistantMessage);
       setStreamingMessage('');
+      
+      // Refocus input after assistant response
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 200);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage = {
@@ -156,6 +187,13 @@ const FitoChatWindow = memo(() => {
       };
       addChatMessage(errorMessage);
       setStreamingMessage('');
+      
+      // Refocus input after error
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 200);
     } finally {
       setChatLoading(false);
     }
@@ -223,6 +261,48 @@ const FitoChatWindow = memo(() => {
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // Update Fito mood when chat opens
+  useEffect(() => {
+    if (chat.isOpen) {
+      updateFitoMood(); // This will set the mood based on current game state
+    }
+  }, [chat.isOpen, updateFitoMood]);
+
+  // Send initial message when chat opens and is empty
+  useEffect(() => {
+    if (chat.isOpen && chat.messages.length === 0 && !streamingMessage) {
+      const timer = setTimeout(() => {
+        let greeting = getTimeBasedGreeting();
+        
+        // Customize greeting based on Fito's mood
+        if (fito.mood === 'excited') {
+          greeting += ' ¡Estoy muy emocionado de verte!';
+        } else if (fito.mood === 'worried') {
+          greeting += ' He notado que tienes algunas misiones pendientes.';
+        } else if (fito.mood === 'sad') {
+          greeting += ' Veo que quizás necesitas un poco de apoyo hoy.';
+        } else {
+          greeting += ' ¿Cómo te sientes hoy?';
+        }
+        
+        if (user?.name && user.name !== 'undefined') {
+          greeting = greeting.replace('¿Cómo te sientes hoy?', `¿Cómo te sientes hoy, ${user.name}?`);
+        }
+        
+        const initialMessage = {
+          role: 'assistant',
+          content: greeting,
+          timestamp: new Date().toISOString(),
+          isInitial: true,
+        };
+        
+        addChatMessage(initialMessage);
+      }, 800); // Small delay for better UX
+
+      return () => clearTimeout(timer);
+    }
+  }, [chat.isOpen, chat.messages.length, streamingMessage, user?.name, fito.mood, addChatMessage]);
+
   if (!chat.isOpen) return null;
 
   return (
@@ -270,7 +350,7 @@ const FitoChatWindow = memo(() => {
         <div className="relative flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-1 bg-white/20 rounded-full">
-              <FitoAvatar mood={fito.mood} size="small" />
+              <FitoAvatar mood={fito.mood} size="small" isAnimating={false} />
             </div>
             <div>
               <h3 className="font-bold text-lg flex items-center gap-2">
@@ -337,35 +417,18 @@ const FitoChatWindow = memo(() => {
       <div className="flex-1 overflow-y-auto p-4">
         {chat.messages.length === 0 && !streamingMessage && (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-center py-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-center h-full"
           >
-            <div className="bg-white/25 backdrop-blur-lg rounded-2xl p-6 border border-white/30 shadow-xl">
-              <div className="mb-4">
-                <FitoAvatar mood={fito.mood} size="medium" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-800" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}>
-                ¡Hola! Soy Fito 🌱
-              </h3>
-              <p className="text-sm text-gray-700 leading-relaxed font-medium" style={{ textShadow: '0 1px 1px rgba(255,255,255,0.3)' }}>
-                Estoy aquí para apoyarte en tu bienestar mental. 
-                Puedes preguntarme sobre técnicas de relajación, manejo de emociones, 
-                o cualquier tema relacionado con tu crecimiento personal.
-              </p>
-              <div className="mt-5 flex justify-center">
-                <div className="flex space-x-1">
-                  {[...Array(3)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="w-2 h-2 bg-purple-500 rounded-full"
-                      animate={{ scale: [1, 1.3, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
-                    />
-                  ))}
-                </div>
-              </div>
+            <div className="text-center text-white/60">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-40" />
+              </motion.div>
+              <p className="text-sm">Preparando conversación...</p>
             </div>
           </motion.div>
         )}
@@ -391,7 +454,7 @@ const FitoChatWindow = memo(() => {
             >
               {message.role === 'assistant' && !message.isError && (
                 <div className="flex items-center space-x-2 mb-2">
-                  <FitoAvatar mood={fito.mood} size="tiny" />
+                  <FitoAvatar mood={fito.mood} size="tiny" isAnimating={false} />
                   <span className="text-xs text-gray-600 font-medium">Fito</span>
                 </div>
               )}
@@ -416,7 +479,7 @@ const FitoChatWindow = memo(() => {
           >
             <div className="max-w-[80%] bg-white/30 backdrop-blur-md text-gray-800 rounded-2xl px-4 py-3 border border-white/40 shadow-lg">
               <div className="flex items-start space-x-2 mb-2">
-                <FitoAvatar mood={fito.mood} size="tiny" />
+                <FitoAvatar mood={fito.mood} size="tiny" isAnimating={false} />
                 <span className="text-xs text-gray-600 font-medium">Fito</span>
               </div>
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed font-medium">
@@ -438,7 +501,7 @@ const FitoChatWindow = memo(() => {
           >
             <div className="bg-white/30 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/40 shadow-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <FitoAvatar mood={fito.mood} size="tiny" />
+                <FitoAvatar mood={fito.mood} size="tiny" isAnimating={false} />
                 <span className="text-xs text-gray-600 font-medium">Fito está escribiendo...</span>
               </div>
               <div className="flex space-x-1">
