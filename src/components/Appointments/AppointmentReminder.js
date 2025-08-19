@@ -4,7 +4,7 @@ import { Calendar, Clock, Video, X, RefreshCw, ChevronUp, ChevronDown } from 'lu
 import useGameStore from '../../lib/gameStore';
 
 const AppointmentReminder = memo(() => {
-  const { appointment, updateAppointment, cancelAppointment } = useGameStore();
+  const { appointment, updateAppointment, cancelAppointment, startVideoCall } = useGameStore();
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -31,10 +31,8 @@ const AppointmentReminder = memo(() => {
   };
 
   const handleStartSession = () => {
-    // Simulate starting a therapy session
-    updateAppointment({ ...appointment, status: 'in-progress' });
-    // In a real app, this would open video call or redirect to session
-    alert('¡Iniciando sesión con tu terapeuta!');
+    // Start the video call interface
+    startVideoCall();
   };
 
   const handleReschedule = () => {

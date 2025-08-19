@@ -6,6 +6,7 @@ import FitoChat from '../components/Fito/FitoChat';
 import FitoChatWindow from '../components/Fito/FitoChatWindow';
 import MissionsPanel from '../components/Missions/MissionsPanel';
 import AppointmentReminder from '../components/Appointments/AppointmentReminder';
+import VideoCallInterface from '../components/VideoCall/VideoCallInterface';
 import useGameStore from '../lib/gameStore';
 import useHydration from '../hooks/useHydration';
 import { getRandomDialog, shouldShowCheckIn } from '../lib/fitoDialogs';
@@ -31,7 +32,7 @@ const IsometricGardenCanvas = dynamic(
 
 const GardenPageImmersive = () => {
   const router = useRouter();
-  const { user, fito, garden, missions, stats, appointment, chat, addPlant, updateStreak, toggleMovementMode, toggleChat } = useGameStore();
+  const { user, fito, garden, missions, stats, appointment, chat, videoCall, addPlant, updateStreak, toggleMovementMode, toggleChat } = useGameStore();
   const [showFitoMessage, setShowFitoMessage] = useState(true);
   const isHydrated = useHydration();
   
@@ -81,8 +82,10 @@ const GardenPageImmersive = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Isometric Garden Canvas */}
-      <IsometricGardenCanvas />
+      {/* Main Garden Content */}
+      <div className={`transition-all duration-300 ${videoCall.isActive ? 'blur-sm scale-95' : ''}`}>
+        {/* Isometric Garden Canvas */}
+        <IsometricGardenCanvas />
       
       {/* Missions Panel */}
       <MissionsPanel />
@@ -344,9 +347,15 @@ const GardenPageImmersive = () => {
         </div>
       </motion.div>
 
-      {/* Chat Window */}
+        {/* Chat Window */}
+        <AnimatePresence>
+          {chat.isOpen && <FitoChatWindow />}
+        </AnimatePresence>
+      </div>
+
+      {/* Video Call Interface - Overlay */}
       <AnimatePresence>
-        {chat.isOpen && <FitoChatWindow />}
+        {videoCall.isActive && <VideoCallInterface />}
       </AnimatePresence>
     </div>
   );

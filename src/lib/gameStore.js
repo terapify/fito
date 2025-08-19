@@ -50,6 +50,14 @@ const initialState = {
     turnCount: 0,
     isLoading: false,
   },
+  videoCall: {
+    isActive: false,
+    startTime: null,
+    duration: 0,
+    isMuted: false,
+    isCameraOn: true,
+    connectionStatus: 'connecting', // connecting, connected, poor, disconnected
+  },
 };
 
 const useGameStore = create(
@@ -286,6 +294,73 @@ const useGameStore = create(
             ...state.chat,
             messages: [],
             turnCount: 0,
+          },
+        })),
+
+      // Video Call actions
+      startVideoCall: () =>
+        set((state) => ({
+          videoCall: {
+            ...state.videoCall,
+            isActive: true,
+            startTime: new Date().toISOString(),
+            duration: 0,
+            connectionStatus: 'connecting',
+          },
+          appointment: {
+            ...state.appointment,
+            status: 'in-progress',
+          },
+        })),
+
+      endVideoCall: () =>
+        set((state) => ({
+          videoCall: {
+            ...state.videoCall,
+            isActive: false,
+            startTime: null,
+            duration: 0,
+            connectionStatus: 'disconnected',
+          },
+          appointment: {
+            ...state.appointment,
+            status: 'completed',
+          },
+          stats: {
+            ...state.stats,
+            sessionsAttended: state.stats.sessionsAttended + 1,
+          },
+        })),
+
+      updateCallDuration: (duration) =>
+        set((state) => ({
+          videoCall: {
+            ...state.videoCall,
+            duration,
+          },
+        })),
+
+      toggleMute: () =>
+        set((state) => ({
+          videoCall: {
+            ...state.videoCall,
+            isMuted: !state.videoCall.isMuted,
+          },
+        })),
+
+      toggleCamera: () =>
+        set((state) => ({
+          videoCall: {
+            ...state.videoCall,
+            isCameraOn: !state.videoCall.isCameraOn,
+          },
+        })),
+
+      updateConnectionStatus: (status) =>
+        set((state) => ({
+          videoCall: {
+            ...state.videoCall,
+            connectionStatus: status,
           },
         })),
 
