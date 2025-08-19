@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useSpring, animated } from '@react-spring/web';
 import useGameStore from '../../lib/gameStore';
+import IsometricFito from '../Fito/IsometricFito';
 
 // Isometric configuration
 const ISO_CONFIG = {
@@ -63,7 +65,7 @@ function drawPlant(ctx, x, y, type, growth, time) {
   const swayOffset = Math.sin(time * 0.001 + x) * 3;
   
   ctx.save();
-  ctx.translate(x + swayOffset, y + size / 2);
+  ctx.translate(x + swayOffset, y + size/2);
   
   if (type === 'flower') {
     // Stem
@@ -131,6 +133,29 @@ function drawPlant(ctx, x, y, type, growth, time) {
   ctx.restore();
 }
 
+// Draw Fito
+function drawFito(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Body
+  ctx.fillStyle = '#99ff99';
+  ctx.beginPath();
+  ctx.arc(0, 0, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(-5, -5, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(5, -5, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // Draw decoration (rocks, flowers)
 function drawDecoration(ctx, x, y, type) {
   ctx.save();
@@ -179,7 +204,25 @@ export default function IsometricGardenCanvasOptimized() {
   const animationFrameRef = useRef();
   const particlesRef = useRef([]);
   const [hoveredTile, setHoveredTile] = useState(null);
-  const { garden, addPlant } = useGameStore();
+  const { garden, addPlant, fito, updateFitoPosition } = useGameStore();
+  const fitoRef = useRef(fito);
+
+  useEffect(() => {
+    fitoRef.current = fito;
+  }, [fito]);
+
+  const [fitoSpring, api] = useSpring(() => ({
+    x: 0,
+    y: 0,
+    config: { mass: 1, tension: 280, friction: 60 },
+  }));
+
+  useEffect(() => {
+    if (fitoRef.current && fitoRef.current.gridPosition) {
+      const { x, y } = gridToIso(fitoRef.current.gridPosition.row, fitoRef.current.gridPosition.col);
+      api.start({ x, y });
+    }
+  }, [fitoRef.current, api]);
   
   // Static decorations for each tile (generated once)
   const decorationsRef = useRef(null);
@@ -211,6 +254,43 @@ export default function IsometricGardenCanvasOptimized() {
       });
     }
   }, []);
+
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      console.log('fitoRef.current', fitoRef.current);
+      if (fitoRef.current && fitoRef.current.gridPosition) {
+        let { row, col } = fitoRef.current.gridPosition;
+        console.log('current position', { row, col });
+        switch (e.key) {
+          case 'ArrowUp':
+            row--;
+            break;
+          case 'ArrowDown':
+            row++;
+            break;
+          case 'ArrowLeft':
+            col--;
+            break;
+          case 'ArrowRight':
+            col++;
+            break;
+          default:
+            return;
+        }
+        console.log('new position', { row, col });
+
+        if (row >= 0 && row < ISO_CONFIG.gridRows && col >= 0 && col < ISO_CONFIG.gridCols) {
+          updateFitoPosition(row, col);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [updateFitoPosition]);
   
   // Handle mouse move
   const handleMouseMove = useCallback((e) => {
@@ -301,14 +381,12 @@ export default function IsometricGardenCanvasOptimized() {
 
           if (plant) {
             drawPlant(ctx, x, y, plant.type, plant.growth || 50, time);
-          } else {
-            const decorationType = decorationsRef.current[tileKey];
-            if (decorationType) {
-              drawDecoration(ctx, x, y - 5, decorationType);
-            }
           }
         }
       }
+
+      // Draw Fito
+      drawFito(ctx, fitoSpring.x.get(), fitoSpring.y.get());
       
       ctx.restore();
 
@@ -342,7 +420,7 @@ export default function IsometricGardenCanvasOptimized() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [garden.plants, hoveredTile]);
+  }, [garden.plants, hoveredTile, updateFitoPosition, api, fitoSpring]);
   
   return (
     <motion.canvas

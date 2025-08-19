@@ -13,6 +13,7 @@ const initialState = {
     level: 1,
     experience: 0,
     lastInteraction: null,
+    gridPosition: { row: 0, col: 0 },
   },
   garden: {
     plants: [],
@@ -197,6 +198,14 @@ const useGameStore = create(
 
       // Reset game
       resetGame: () => set(initialState),
+
+      updateFitoPosition: (row, col) =>
+        set((state) => ({
+          fito: {
+            ...state.fito,
+            gridPosition: { row, col },
+          },
+        })),
     }),
     {
       name: 'fito-game-storage',
