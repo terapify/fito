@@ -6,27 +6,21 @@ import useGameStore from '../../lib/gameStore';
 const ISO_CONFIG = {
   tileWidth: 64,
   tileHeight: 32,
-  gridRows: 9,
-  gridCols: 9,
-  offsetX: 400,
-  offsetY: 200
+  gridRows: 10,
+  gridCols: 10,
 };
 
 // Convert grid coordinates to isometric screen coordinates
 function gridToIso(row, col) {
-  const x = ISO_CONFIG.offsetX + (col - row) * (ISO_CONFIG.tileWidth / 2);
-  const y = ISO_CONFIG.offsetY + (col + row) * (ISO_CONFIG.tileHeight / 2);
+  const x = (col - row) * (ISO_CONFIG.tileWidth / 2);
+  const y = (col + row) * (ISO_CONFIG.tileHeight / 2);
   return { x, y };
 }
 
 // Convert screen coordinates to grid coordinates
 function isoToGrid(x, y) {
-  const adjustedX = x - ISO_CONFIG.offsetX;
-  const adjustedY = y - ISO_CONFIG.offsetY;
-  
-  const col = Math.floor((adjustedX / (ISO_CONFIG.tileWidth / 2) + adjustedY / (ISO_CONFIG.tileHeight / 2)) / 2);
-  const row = Math.floor((adjustedY / (ISO_CONFIG.tileHeight / 2) - adjustedX / (ISO_CONFIG.tileWidth / 2)) / 2);
-  
+  const row = Math.round((y / ISO_CONFIG.tileHeight) - (x / ISO_CONFIG.tileWidth));
+  const col = Math.round((x / ISO_CONFIG.tileWidth) + (y / ISO_CONFIG.tileHeight));
   return { row, col };
 }
 
@@ -69,7 +63,7 @@ function drawPlant(ctx, x, y, type, growth, time) {
   const swayOffset = Math.sin(time * 0.001 + x) * 3;
   
   ctx.save();
-  ctx.translate(x + swayOffset, y - size / 2);
+  ctx.translate(x + swayOffset, y + size / 2);
   
   if (type === 'flower') {
     // Stem
@@ -185,30 +179,7 @@ export default function IsometricGardenCanvasOptimized() {
   const animationFrameRef = useRef();
   const particlesRef = useRef([]);
   const [hoveredTile, setHoveredTile] = useState(null);
-  const { garden, addPlant, updatePlant } = useGameStore();
-  
-  // Debug: log garden plants to console
-  useEffect(() => {
-    console.log('Garden plants:', garden.plants);
-  }, [garden.plants]);
-  
-  // Migrate existing plants without gridPosition to new grid system
-  useEffect(() => {
-    const plantsNeedingMigration = garden.plants.filter(plant => !plant.gridPosition);
-    if (plantsNeedingMigration.length > 0) {
-      console.log('Migrating plants to grid system:', plantsNeedingMigration);
-      plantsNeedingMigration.forEach((plant, index) => {
-        const row = Math.floor(index / ISO_CONFIG.gridCols);
-        const col = index % ISO_CONFIG.gridCols;
-        const gridPosition = `${row}-${col}`;
-        
-        // Update plant with grid position
-        if (updatePlant) {
-          updatePlant(plant.id, { gridPosition });
-        }
-      });
-    }
-  }, [garden.plants, updatePlant]);
+  const { garden, addPlant } = useGameStore();
   
   // Static decorations for each tile (generated once)
   const decorationsRef = useRef(null);
@@ -230,13 +201,13 @@ export default function IsometricGardenCanvasOptimized() {
     for (let i = 0; i < 15; i++) {
       particlesRef.current.push({
         id: i,
-        x: Math.random() * 800,
-        y: Math.random() * 600,
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
         size: Math.random() * 2 + 1,
         speed: Math.random() * 0.3 + 0.1,
         opacity: Math.random() * 0.3 + 0.2,
         color: Math.random() > 0.5 ? '#fbbf24' : '#ffffff',
-        baseX: Math.random() * 800
+        baseX: Math.random() * window.innerWidth
       });
     }
   }, []);
@@ -245,8 +216,8 @@ export default function IsometricGardenCanvasOptimized() {
   const handleMouseMove = useCallback((e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = e.clientX - rect.left - canvas.width / 2;
+    const y = e.clientY - rect.top - (canvas.height / 2 - ISO_CONFIG.gridRows * ISO_CONFIG.tileHeight / 4);
     
     const { row, col } = isoToGrid(x, y);
     
@@ -278,6 +249,9 @@ export default function IsometricGardenCanvasOptimized() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     
     const ctx = canvas.getContext('2d');
     let time = 0;
@@ -305,49 +279,39 @@ export default function IsometricGardenCanvasOptimized() {
       ctx.arc(170 + cloudOffset, 100, 35, 0, Math.PI * 2);
       ctx.fill();
       
-      // Draw tiles and plants
-      for (let row = ISO_CONFIG.gridRows - 1; row >= 0; row--) {
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2 - ISO_CONFIG.gridRows * ISO_CONFIG.tileHeight / 4);
+
+      // Draw tiles
+      for (let row = 0; row < ISO_CONFIG.gridRows; row++) {
         for (let col = 0; col < ISO_CONFIG.gridCols; col++) {
           const { x, y } = gridToIso(row, col);
-          
-          // Check if tile is hovered
           const isHovered = hoveredTile && hoveredTile.row === row && hoveredTile.col === col;
-          
-          // Alternate tile colors for pattern
           const tileColor = (row + col) % 2 === 0 ? '#4ade80' : '#22c55e';
-          
-          // Draw tile
           drawTile(ctx, x, y, tileColor, isHovered);
-          
-          // Find plant for this position
+        }
+      }
+
+      // Draw plants and decorations
+      for (let row = 0; row < ISO_CONFIG.gridRows; row++) {
+        for (let col = 0; col < ISO_CONFIG.gridCols; col++) {
+          const { x, y } = gridToIso(row, col);
           const tileKey = `${row}-${col}`;
-          let plant = garden.plants.find(p => p.gridPosition === tileKey);
-          
-          // Backward compatibility: if no plant found by gridPosition, try by index
-          if (!plant) {
-            const plantIndex = row * ISO_CONFIG.gridCols + col;
-            plant = garden.plants[plantIndex];
-          }
-          
-          // Draw plant if found
+          const plant = garden.plants.find(p => p.gridPosition === tileKey);
+
           if (plant) {
-            drawPlant(ctx, x, y - 10, plant.type, plant.growth || 50, time);
-            
-            // Debug: draw a red dot to mark plant positions
-            ctx.fillStyle = 'red';
-            ctx.beginPath();
-            ctx.arc(x, y - 5, 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          
-          // Draw static decorations only if no plant
-          const decorationType = decorationsRef.current[tileKey];
-          if (!plant && decorationType) {
-            drawDecoration(ctx, x, y - 5, decorationType);
+            drawPlant(ctx, x, y, plant.type, plant.growth || 50, time);
+          } else {
+            const decorationType = decorationsRef.current[tileKey];
+            if (decorationType) {
+              drawDecoration(ctx, x, y - 5, decorationType);
+            }
           }
         }
       }
       
+      ctx.restore();
+
       // Update and draw particles
       particlesRef.current.forEach(particle => {
         particle.y -= particle.speed;
@@ -383,8 +347,6 @@ export default function IsometricGardenCanvasOptimized() {
   return (
     <motion.canvas
       ref={canvasRef}
-      width={800}
-      height={600}
       className="absolute inset-0 w-full h-full"
       style={{ imageRendering: 'crisp-edges' }}
       onMouseMove={handleMouseMove}
